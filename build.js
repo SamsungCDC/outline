@@ -2,7 +2,10 @@
 /* oxlint-disable @typescript-oxlint/no-var-requires */
 /* oxlint-disable no-undef */
 const { exec } = require("child_process");
-const { readdirSync, existsSync } = require("fs");
+const { readdirSync, existsSync, mkdirSync, copyFileSync } = require("fs");
+const path = require("path");
+
+const isWindows = process.platform === "win32";
 
 const getDirectories = (source) =>
   readdirSync(source, { withFileTypes: true })
@@ -26,13 +29,43 @@ function execAsync(cmd) {
   });
 }
 
+/**
+ * Cross-platform file operations
+ */
+function rmrfAsync(dir) {
+  const cmd = isWindows
+    ? `rmdir /s /q "${dir}" 2>nul || echo.`
+    : `rm -rf ${dir}`;
+  return execAsync(cmd);
+}
+
+function mkdirpAsync(dir) {
+  try {
+    mkdirSync(dir, { recursive: true });
+    return Promise.resolve();
+  } catch (error) {
+    return Promise.reject(error);
+  }
+}
+
+function copyFileAsync(src, dest) {
+  try {
+    const destDir = path.dirname(dest);
+    mkdirSync(destDir, { recursive: true });
+    copyFileSync(src, dest);
+    return Promise.resolve();
+  } catch (error) {
+    return Promise.reject(error);
+  }
+}
+
 async function build() {
   // Clean previous build
   console.log("Clean previous build…");
 
   await Promise.all([
-    execAsync("rm -rf ./build/server"),
-    execAsync("rm -rf ./build/plugins"),
+    rmrfAsync("./build/server"),
+    rmrfAsync("./build/plugins"),
   ]);
 
   const d = getDirectories("./plugins");
@@ -67,22 +100,32 @@ async function build() {
 
   // Copy static files
   console.log("Copying static files…");
+
+  // Create build directory if it doesn't exist
+  mkdirSync("./build", { recursive: true });
+
   await Promise.all([
-    execAsync(
-      "cp ./server/collaboration/Procfile ./build/server/collaboration/Procfile"
+    copyFileAsync(
+      "./server/collaboration/Procfile",
+      "./build/server/collaboration/Procfile"
     ),
-    execAsync(
-      "cp ./server/static/error.dev.html ./build/server/error.dev.html"
+    copyFileAsync(
+      "./server/static/error.dev.html",
+      "./build/server/error.dev.html"
     ),
-    execAsync(
-      "cp ./server/static/error.prod.html ./build/server/error.prod.html"
+    copyFileAsync(
+      "./server/static/error.prod.html",
+      "./build/server/error.prod.html"
     ),
-    execAsync("cp package.json ./build"),
-    ...d.map(async (plugin) =>
-      execAsync(
-        `mkdir -p ./build/plugins/${plugin} && cp ./plugins/${plugin}/plugin.json ./build/plugins/${plugin}/plugin.json 2>/dev/null || :`
-      )
-    ),
+    copyFileAsync("./package.json", "./build/package.json"),
+    ...d.map(async (plugin) => {
+      const pluginJsonPath = `./plugins/${plugin}/plugin.json`;
+      const destPath = `./build/plugins/${plugin}/plugin.json`;
+
+      if (existsSync(pluginJsonPath)) {
+        await copyFileAsync(pluginJsonPath, destPath);
+      }
+    }),
   ]);
 
   console.log("Done!");

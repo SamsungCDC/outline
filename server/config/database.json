@@ -1,23 +1,26 @@
 {
   "development": {
-    "use_env_variable": "DATABASE_URL",
-    "dialect": "postgres"
-  },
-  "test": {
-    "use_env_variable": "DATABASE_URL",
-    "dialect": "postgres"
-  },
-  "production": {
-    "use_env_variable": "DATABASE_URL",
+    "username": "71cf937b979a",
+    "password": "1f286304be7087595ff31b78c615", 
+    "database": "CEFVwJoTOZYX",
+    "host": "postgres-27816b8d-ac27-4073-b0dc-0f15f7cd8499.cqryblsdrbcs.us-east-1.rds.amazonaws.com",
+    "port": 3831,
     "dialect": "postgres",
     "dialectOptions": {
       "ssl": {
+        "require": true,
         "rejectUnauthorized": false
       }
     }
   },
-  "production-ssl-disabled": {
-    "use_env_variable": "DATABASE_URL",
-    "dialect": "postgres"
+  "production": {
+    "use_env_variable": "DATABASE_URL", 
+    "dialect": "postgres",
+    "dialectOptions": {
+      "ssl": {
+        "require": true,
+        "rejectUnauthorized": false
+      }
+    }
   }
 }
